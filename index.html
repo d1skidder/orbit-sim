@@ -20,6 +20,147 @@
 <body>
     <canvas id="ctx" width="1920" height="1080"></canvas>
     
-    <script src="dist/space.js"></script>
+    <!--<script src="dist/space.js"></script>-->
+    <script>
+        (() => {
+  // src/space.ts
+  var canvas = document.getElementById("ctx");
+  var ctx = canvas.getContext("2d");
+  console.log("yes", canvas, ctx);
+  var Planet = class {
+    x;
+    y;
+    x_vel;
+    y_vel;
+    mass;
+    scale;
+    constructor(x, y, mass, scale) {
+      this.x = x;
+      this.y = y;
+      this.x_vel = 0;
+      this.y_vel = 0;
+      this.mass = mass;
+      this.scale = scale;
+    }
+  };
+  var PhysicsMath = class {
+    distance(a, b) {
+      return Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
+    }
+    // f = (g * m1 * m2) / d^2
+    gravitationalForce(a, b) {
+      return 66743e-15 /* gravity */ * a.mass * b.mass / this.distance(a, b) ** 2;
+    }
+  };
+  var sun = new Planet(0, 0, 1989e27, 30);
+  var earth = new Planet(15e10, 0, 5972e21, 10);
+  earth.y_vel = Math.sqrt(66743e-15 /* gravity */ * sun.mass / PhysicsMath.prototype.distance(earth, sun));
+  var mars = new Planet(228e9, 0, 639e21, 8);
+  mars.y_vel = Math.sqrt(66743e-15 /* gravity */ * sun.mass / PhysicsMath.prototype.distance(mars, sun));
+  var mercury = new Planet(579e8, 0, 33e22, 6);
+  mercury.y_vel = Math.sqrt(66743e-15 /* gravity */ * sun.mass / PhysicsMath.prototype.distance(mercury, sun));
+  var venus = new Planet(108e9, 0, 487e22, 9);
+  venus.y_vel = Math.sqrt(66743e-15 /* gravity */ * sun.mass / PhysicsMath.prototype.distance(venus, sun));
+  var jupiter = new Planet(778e9, 0, 1898e24, 15);
+  jupiter.y_vel = Math.sqrt(66743e-15 /* gravity */ * sun.mass / PhysicsMath.prototype.distance(jupiter, sun));
+  var saturn = new Planet(143e10, 0, 568e24, 13);
+  saturn.y_vel = Math.sqrt(66743e-15 /* gravity */ * sun.mass / PhysicsMath.prototype.distance(saturn, sun));
+  var uranus = new Planet(287e10, 0, 868e23, 12);
+  uranus.y_vel = Math.sqrt(66743e-15 /* gravity */ * sun.mass / PhysicsMath.prototype.distance(uranus, sun));
+  var neptune = new Planet(45e11, 0, 102e24, 11);
+  neptune.y_vel = Math.sqrt(66743e-15 /* gravity */ * sun.mass / PhysicsMath.prototype.distance(neptune, sun));
+  var objects = [sun, earth, mars, mercury, venus, jupiter, saturn, uranus, neptune];
+  for (let i = 0; i < 100; i++) {
+    const radius = 28e10 + Math.random() * 1e11;
+    const angle = Math.random() * 2 * Math.PI;
+    const asteroid = new Planet(radius * Math.cos(angle), radius * Math.sin(angle), 1e20, 1);
+    const eccentricity = Math.random() * 0.2;
+    const velocity = Math.sqrt(66743e-15 /* gravity */ * sun.mass / radius);
+    asteroid.x_vel = -Math.sin(angle) * velocity;
+    asteroid.y_vel = Math.cos(angle) * velocity * (1 + eccentricity);
+    objects.push(asteroid);
+  }
+  for (let i = 0; i < 100; i++) {
+    const radius = 45e11 + Math.random() * 1e12;
+    const angle = Math.random() * 2 * Math.PI;
+    const kuiper = new Planet(radius * Math.cos(angle), radius * Math.sin(angle), 1e22, 2);
+    const eccentricity = Math.random() * 0.3;
+    const velocity = Math.sqrt(66743e-15 /* gravity */ * sun.mass / radius);
+    kuiper.x_vel = -Math.sin(angle) * velocity;
+    kuiper.y_vel = Math.cos(angle) * velocity * (1 + eccentricity);
+    objects.push(kuiper);
+  }
+  var physics = new PhysicsMath();
+  function update_logic() {
+    for (const object of objects) {
+      let total_x_force = 0;
+      let total_y_force = 0;
+      for (const other of objects) {
+        if (object === other) continue;
+        const force = physics.gravitationalForce(object, other);
+        const angle = Math.atan2(other.y - object.y, other.x - object.x);
+        total_x_force += Math.cos(angle) * force;
+        total_y_force += Math.sin(angle) * force;
+      }
+      const x_acc = total_x_force / object.mass;
+      const y_acc = total_y_force / object.mass;
+      object.x_vel += x_acc * 1e4 /* time_update */;
+      object.y_vel += y_acc * 1e4 /* time_update */;
+      object.x += object.x_vel * 1e4 /* time_update */;
+      object.y += object.y_vel * 1e4 /* time_update */;
+    }
+  }
+  function draw_loop(delta) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (const object of objects) {
+      const t_x = object.x * 1e-10 /* scaler */ * zoom + canvas.width / 2;
+      const t_y = object.y * 1e-10 /* scaler */ * zoom + canvas.height / 2;
+      ctx.beginPath();
+      ctx.arc(t_x, t_y, object.scale ?? 20 * zoom, 0, 2 * Math.PI);
+      ctx.fillStyle = "red";
+      ctx.fill();
+      if (zoom > 0.5) {
+        ctx.fillStyle = "#000";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`[${object.x_vel.toFixed(2)}, ${object.y_vel.toFixed(2)}]`, t_x, t_y - (object.scale ?? 20) / 2 - (object.scale ?? 20) * 0.65);
+      }
+    }
+  }
+  var last_time = performance.now();
+  function loop() {
+    const now = performance.now();
+    const delta = now - last_time;
+    last_time = now;
+    update_logic();
+    draw_loop(delta);
+    requestAnimationFrame(loop);
+  }
+  loop();
+  canvas.style.width = `${window.innerWidth}px`;
+  canvas.style.height = `${window.innerHeight}px`;
+  canvas.width = window.innerWidth * devicePixelRatio;
+  canvas.height = window.innerHeight * devicePixelRatio;
+  window.addEventListener("resize", () => {
+    canvas.style.width = `${window.innerWidth}px`;
+    canvas.style.height = `${window.innerHeight}px`;
+    canvas.width = window.innerWidth * devicePixelRatio;
+    canvas.height = window.innerHeight * devicePixelRatio;
+  });
+  var zoom = 1;
+  var zoom_vel = 0;
+  var zoom_speed = 25e-4;
+  var zoom_damp = 0.85;
+  window.addEventListener("wheel", (e) => {
+    zoom_vel += -e.deltaY * zoom_speed;
+  });
+  function update_zoom() {
+    zoom_vel *= zoom_damp;
+    zoom *= 1 + zoom_vel;
+    requestAnimationFrame(update_zoom);
+  }
+  update_zoom();
+})();
+    </script>
 </body>
 </html>
